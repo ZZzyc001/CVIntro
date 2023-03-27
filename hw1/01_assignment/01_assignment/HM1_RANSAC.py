@@ -27,7 +27,8 @@ if __name__ == "__main__":
 
     # sample points group
 
-    idx = np.random.choice(noise_points.shape[0], (sample_time, 3))
+    idx = np.random.choice(noise_points.shape[0], (sample_time, 3),
+                           replacement=False)
 
     # estimate the plane with sampled points group
 
