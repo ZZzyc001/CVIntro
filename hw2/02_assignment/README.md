@@ -32,7 +32,7 @@ pip install tensorflow # for tensorboardx
 ```
 The specific version of pytorch should make no difference for this assignment, since we only use some basic functions. You can also install the GPU version if you can access a GPU.
 
-# CIFAR-10 
+# CIFAR-10
 
 ## Dataset
 - Download cifar-10 dataset from [here](https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz) and save to `datasets`. Then unzip it.
@@ -67,6 +67,7 @@ tensorboard --logdir .
 ```
 
 # Submission
+
 - Compress the entire folder **except** `datasets` and `experiments`.
 
 - Rename the compressed folder to **Name_ID.zip** and submit to [course.pku.edu.cn](https://course.pku.edu.cn/).

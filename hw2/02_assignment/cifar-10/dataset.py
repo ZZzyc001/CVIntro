@@ -2,12 +2,15 @@ import os
 import os.path
 import numpy as np
 import pickle
-import torch 
+import torch
+from PIL import Image
+import cv2
+from torchvision import transforms
 
-# # use below packages as you like 
+# # use below packages as you like
 # import torchvision.transforms as tfs
-# from PIL import Image
 # import cv2
+
 
 class CIFAR10(torch.utils.data.Dataset):
     """
@@ -17,13 +20,13 @@ class CIFAR10(torch.utils.data.Dataset):
         super(CIFAR10, self).__init__()
 
         self.base_folder = '../datasets/cifar-10-batches-py'
-        self.train_list = ['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4','data_batch_5']
+        self.train_list = [
+            'data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4',
+            'data_batch_5'
+        ]
         self.test_list = ['test_batch']
 
-        self.meta = {
-            'filename': 'batches.meta',
-            'key': 'label_names'
-        }
+        self.meta = {'filename': 'batches.meta', 'key': 'label_names'}
 
         self.train = train  # training set or test set
         if self.train:
@@ -55,7 +58,10 @@ class CIFAR10(torch.utils.data.Dataset):
         with open(path, 'rb') as infile:
             data = pickle.load(infile, encoding='latin1')
             self.classes = data[self.meta['key']]
-        self.class_to_idx = {_class: i for i, _class in enumerate(self.classes)}
+        self.class_to_idx = {
+            _class: i
+            for i, _class in enumerate(self.classes)
+        }
 
     def __getitem__(self, index):
         """
@@ -66,11 +72,19 @@ class CIFAR10(torch.utils.data.Dataset):
             tuple: (image, target) where target is index of the target class.
         """
         img, target = self.data[index], self.targets[index]
-        img = img.astype(np.float32)
-        img = img.transpose(2, 0, 1)
-        
+        # img = img.astype(np.float32)
+        # img = img.transpose(2, 0, 1)
+
         # ------------TODO--------------
         # data augmentation
+        # You can use any data augmentation methods you like.
+        transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(0.2, 0.2, 0.2, 0.2),
+            transforms.ToTensor(),
+        ])
+        img = transform(img)
         # ------------TODO--------------
 
         return img, target
@@ -78,8 +92,8 @@ class CIFAR10(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.data)
 
+
 if __name__ == '__main__':
-    from PIL import Image
     # --------------------------------
     # The resolution of CIFAR-10 is tooooo low
     # You can use Lenna.png as an example to visualize and check your code.
@@ -94,7 +108,7 @@ if __name__ == '__main__':
     #     cv2.imwrite(f'aug1_{i}.png', imgs)
     #     i += 1
     #     if i == 10:
-    #         break 
+    #         break
 
     # Visualize and save for submission
     img = Image.open('Lenna.png')
@@ -102,13 +116,21 @@ if __name__ == '__main__':
 
     # --------------TODO------------------
     # Copy the first kind of your augmentation code here
+    transform = transforms.Compose([
+        transforms.ColorJitter(0.2, 0.2, 0.2, 0.2),
+    ])
+    img_ = img.copy()
+    img = transform(img)
     # --------------TODO------------------
     aug1 = img
     aug1.save(f'../results/Lenna_aug1.png')
 
     # --------------TODO------------------
     # Copy the second kind of your augmentation code here
+    transform = transforms.Compose([
+        transforms.RandomHorizontalFlip(1),
+    ])
+    img = transform(img_)
     # --------------TODO------------------
     aug2 = img
     aug2.save(f'../results/Lenna_aug2.png')
-
