@@ -2,3 +2,6 @@ hw*/*.zip
 cvintro.txt
 hw2/02_assignment/datasets/*
 hw2/02_assignment/experiments/*
+
+hw4/04_assignment/04_assignment/dataset/*
+hw4/04_assignment/04_assignment/exps/*
