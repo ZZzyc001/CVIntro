@@ -29,72 +29,115 @@ def cal_iou_mask(mask1, mask2):
 
 
 def compute_segmentation_ap(output_list, gt_labels_list, iou_threshold=0.5):
-    AP = np.zeros(len(output_list))
+    prec = np.zeros((3, 1001))
+    rec = np.zeros((3, 1001))
 
-    TP = np.zeros(3)
-    FP = np.zeros(3)
-    FN = np.zeros(3)
+    threshold = np.linspace(0., 1., 101)
 
+    ## put all the output element together and sort them by their scores
+    out = []
     for i in range(len(output_list)):
         pr_mask = output_list[i]['masks']
         pr_labels = output_list[i]['labels']
         n_pr = pr_mask.shape[0]
-
-        if n_pr == 0:
-            continue
-
         gt_mask = gt_labels_list[i]['masks']
         gt_labels = gt_labels_list[i]['labels']
 
         for j in range(n_pr):
             if pr_labels[j] == gt_labels:
-                if cal_iou_mask(pr_mask[j], gt_mask[0]) > iou_threshold:
-                    TP[gt_labels - 1] += 1
+                out.append({
+                    "mask": pr_mask[j],
+                    "label": pr_labels[j],
+                    "score": output_list[i]['scores'][j],
+                    "gt_mask": gt_mask[0],
+                    "gt_label": gt_labels
+                })
+
+    out.sort(key=lambda x: x['score'], reverse=True)
+
+    for t in range(len(out)):
+        TP = np.zeros(3)
+        FP = np.zeros(3)
+        FN = np.zeros(3)
+        for p in out:
+            if p['score'] > out[t]['score']:
+                if cal_iou_mask(p['mask'], p['gt_mask']) > iou_threshold:
+                    TP[p['label'] - 1] += 1
                 else:
-                    FP[gt_labels - 1] += 1
+                    FP[p['label'] - 1] += 1
             else:
-                if cal_iou_mask(pr_mask[j], gt_mask[0]) > iou_threshold:
-                    FN[gt_labels - 1] += 1
+                if cal_iou_mask(p['mask'], p['gt_mask']) <= iou_threshold:
+                    FN[p['label'] - 1] += 1
 
-    AP = TP * TP / (TP + FP) / (TP + FN)
+        prec[:, t] = np.where(TP + FP > 0, TP / (TP + FP), 1.)
+        rec[:, t] = np.where(TP > 0, TP / (TP + FN), 0)
 
+    # print('prec', prec)
+    # print('rec', rec)
+
+    AP = np.zeros(3)
+
+    for t in range(len(out) - 1):
+        AP += (rec[:, t + 1] - rec[:, t]) * prec[:, t + 1]
+
+    AP /= rec[:, len(out) - 1] - rec[:, 0]
     return AP.mean()
 
 
 def compute_detection_ap(output_list, gt_labels_list, iou_threshold=0.5):
-    AP = np.zeros(len(output_list))
+    prec = np.zeros((3, 1001))
+    rec = np.zeros((3, 1001))
 
-    TP = np.zeros(3)
-    FP = np.zeros(3)
-    FN = np.zeros(3)
+    threshold = np.linspace(0., 1., 101)
 
+    ## put all the output element together and sort them by their scores
+    out = []
     for i in range(len(output_list)):
-        pr_box = output_list[i]['boxes']
+        pr_mask = output_list[i]['boxes']
         pr_labels = output_list[i]['labels']
-        n_pr = pr_box.shape[0]
-
-        if n_pr == 0:
-            continue
-
-        gt_box = gt_labels_list[i]['boxes']
+        n_pr = pr_mask.shape[0]
+        gt_mask = gt_labels_list[i]['boxes']
         gt_labels = gt_labels_list[i]['labels']
 
         for j in range(n_pr):
             if pr_labels[j] == gt_labels:
-                if cal_iou_box(pr_box[j], gt_box[0]) > iou_threshold:
-                    TP[gt_labels - 1] += 1
-                else:
-                    FP[gt_labels - 1] += 1
-            else:
-                if cal_iou_box(pr_box[j], gt_box[0]) > iou_threshold:
-                    FN[gt_labels - 1] += 1
+                out.append({
+                    "box": pr_mask[j],
+                    "label": pr_labels[j],
+                    "score": output_list[i]['scores'][j],
+                    "gt_box": gt_mask[0],
+                    "gt_label": gt_labels
+                })
 
-    AP = TP * TP / (TP + FP) / (TP + FN)
+    out.sort(key=lambda x: x['score'])
+
+    for t in range(len(out)):
+        TP = np.zeros(3)
+        FP = np.zeros(3)
+        FN = np.zeros(3)
+        for p in out:
+            if p['score'] > out[t]['score']:
+                if cal_iou_box(p['box'], p['gt_box']) > iou_threshold:
+                    TP[p['label'] - 1] += 1
+                else:
+                    FP[p['label'] - 1] += 1
+            else:
+                if cal_iou_box(p['box'], p['gt_box']) <= iou_threshold:
+                    FN[p['label'] - 1] += 1
+        prec[:, t] = np.where(TP + FP > 0, TP / (TP + FP), 1.)
+        rec[:, t] = np.where(TP > 0, TP / (TP + FN), 0)
+
+    AP = np.zeros(3)
+
+    for t in range(len(out) - 1):
+        AP += (rec[:, t + 1] - rec[:, t]) * prec[:, t + 1]
+
+    AP /= rec[:, len(out) - 1] - rec[:, 0]
 
     return AP.mean()
 
 
-dataset_test = SingleShapeDataset(10)
+dataset_test = SingleShapeDataset(100)
 
 data_loader_test = torch.utils.data.DataLoader(dataset_test,
                                                batch_size=1,
@@ -120,7 +163,7 @@ path = "../results/MaskRCNN/"
 gt_labels_list = []
 output_label_list = []
 with torch.no_grad():
-    for i in range(10):
+    for i in range(100):
         print(i)
         imgs, labels = dataset_test[i]
         gt_labels_list.append(labels)
